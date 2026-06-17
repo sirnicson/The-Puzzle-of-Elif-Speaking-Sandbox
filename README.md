@@ -2,7 +2,7 @@
 
 An interactive, character-driven English speaking sandbox game designed specifically to help A2-B1 language learners build speaking confidence, practice vocabulary, and relate language back to their own lives.
 
-👉 Click here to play the live game! 
+👉 Click here to play the live game! - https://sirnicson.github.io/The-Puzzle-of-Elif-Speaking-Sandbox/
 
 📌 Repository Description (For the GitHub "About" Sidebar)
 
