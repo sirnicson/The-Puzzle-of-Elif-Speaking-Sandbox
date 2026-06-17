@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Puzzle of Elif - Speaking Sandbox</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for pieces deck */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.15);
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(0,0,0,0.25);
+        }
+        /* Dragging & Drag over styling */
+        .drag-over {
+            border-color: #0d9488 !important;
+            background-color: #f0fdfa !important;
+            transform: scale(1.02);
+        }
+        /* Bounce and glow keyframes */
+        @keyframes successGlow {
+            0%, 100% { box-shadow: 0 0 0 0px rgba(16, 185, 129, 0); }
+            50% { box-shadow: 0 0 15px 5px rgba(16, 185, 129, 0.5); }
+        }
+        .success-glow {
+            animation: successGlow 1s ease-in-out;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .shake-animation {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* 3D Flipping Card Styling */
+        .card-perspective {
+            perspective: 1000px;
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 145px; /* Added height for content layout */
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1rem;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800 min-h-screen flex flex-col overflow-x-hidden selection:bg-teal-100">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-white border-b border-stone-200 py-3 px-6 sticky top-0 z-40 shadow-sm flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="bg-teal-600 text-white p-2 rounded-xl shadow-md shadow-teal-600/20">
+                <i class="fa-solid fa-puzzle-piece text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-extrabold text-stone-800 text-lg tracking-tight">The Puzzle of Elif</h1>
+                <p class="text-xs text-stone-500 font-medium">A2-B1 Speaking & Character Sandbox</p>
+            </div>
+        </div>
+        <!-- Progress Bar (Visible during Game) -->
+        <div id="game-progress" class="hidden flex items-center space-x-3">
+            <span class="text-xs font-bold text-stone-500 uppercase tracking-wider">Progress:</span>
+            <div class="w-32 bg-stone-200 h-2.5 rounded-full overflow-hidden">
+                <div id="progress-bar-fill" class="bg-teal-500 h-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <span id="progress-text" class="text-sm font-semibold text-teal-600">0/20</span>
+        </div>
+        <!-- Reset/Back button -->
+        <div class="flex items-center space-x-2">
+            <button id="btn-restart" class="hidden text-xs font-bold text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 py-2 px-3 rounded-lg transition-colors flex items-center gap-1">
+                <i class="fa-solid fa-rotate-left"></i> Restart
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Dynamic Container -->
+    <main class="flex-grow flex flex-col justify-center">
+
+        <!-- SCREEN 1: THE BLUEPRINT (INTRODUCTION) -->
+        <section id="screen-intro" class="max-w-4xl mx-auto px-4 py-8 flex-grow flex flex-col justify-center items-center">
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <!-- Left: Silhouette profile container -->
+                <div class="relative bg-teal-50 rounded-3xl p-8 border border-teal-100 shadow-inner flex flex-col items-center justify-center min-h-[350px]">
+                    <!-- Floating hints -->
+                    <div class="absolute top-6 left-6 bg-white shadow-md rounded-xl p-2.5 transform -rotate-6 text-2xl" title="Teaglass & Laptop">☕💻</div>
+                    <div class="absolute bottom-12 right-6 bg-white shadow-md rounded-xl p-2.5 transform rotate-12 text-2xl" title="Suitcase">🧳✈️</div>
+                    <div class="absolute top-12 right-12 bg-white shadow-md rounded-xl p-2.5 transform rotate-6 text-2xl" title="Plants">🌱🏡</div>
+                    <div class="absolute bottom-6 left-12 bg-white shadow-md rounded-xl p-2.5 transform -rotate-12 text-2xl" title="Cat">🐱📓</div>
+                    
+                    <!-- Silhouette profile -->
+                    <div class="w-40 h-40 bg-stone-200 rounded-full flex items-center justify-center overflow-hidden border-4 border-white shadow-lg relative">
+                        <i class="fa-solid fa-user-astronaut text-7xl text-stone-400 mt-6"></i>
+                    </div>
+                    <h3 class="mt-4 font-bold text-xl text-teal-900">Who is Elif?</h3>
+                    <p class="text-xs text-center text-teal-700/80 mt-1 max-w-xs">An everyday woman in Istanbul, built entirely out of your choices and imagination!</p>
+                </div>
+
+                <!-- Right: Simple visual instructions -->
+                <div class="space-y-6">
+                    <div class="space-y-2">
+                        <span class="inline-block bg-teal-100 text-teal-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Interactive Speaking Game</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-stone-900 tracking-tight">The Puzzle <br>of Elif</h2>
+                    </div>
+                    
+                    <p class="text-stone-600 text-base leading-relaxed">
+                        Solve the puzzle of Elif's life! Match her cards to the correct slots, solve the short clues, and tell her story.
+                    </p>
+
+                    <!-- Steps List -->
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-3">
+                            <div class="bg-teal-100 text-teal-700 w-8 h-8 rounded-lg flex items-center justify-center font-bold flex-shrink-0 mt-0.5">1</div>
+                            <div>
+                                <h4 class="font-bold text-stone-800 text-sm">Pick a Card</h4>
+                                <p class="text-xs text-stone-500">Pick any of the 20 cards. Click the 🔄 icon to read its mystery clue!</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="bg-teal-100 text-teal-700 w-8 h-8 rounded-lg flex items-center justify-center font-bold flex-shrink-0 mt-0.5">2</div>
+                            <div>
+                                <h4 class="font-bold text-stone-800 text-sm">Match the Slot</h4>
+                                <p class="text-xs text-stone-500">Drag it to Daily Life, Free Time, Secret, or Dream. If right, it turns green!</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="bg-teal-100 text-teal-700 w-8 h-8 rounded-lg flex items-center justify-center font-bold flex-shrink-0 mt-0.5">3</div>
+                            <div>
+                                <h4 class="font-bold text-stone-800 text-sm">Double Speaking Challenges</h4>
+                                <p class="text-xs text-stone-500">Answer 2 simple questions: one about Elif's persona, and one about your life.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CTA Start Button -->
+                    <div class="pt-4">
+                        <button id="btn-start" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-extrabold py-4 px-6 rounded-2xl shadow-lg shadow-teal-600/30 transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-3">
+                            Start the Speaking Sandbox <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCREEN 2: THE SPEAKING SANDBOX JAMBOARD -->
+        <section id="screen-game" class="hidden flex-grow flex flex-col p-4 md:p-6 max-w-7xl mx-auto w-full gap-6">
+            
+            <!-- Quick Assist Bar -->
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">💡</span>
+                    <div>
+                        <p class="text-xs text-amber-900 font-bold">Interactive Jamboard</p>
+                        <p class="text-xs text-amber-800/80">Drag a card or click a card, then click a slot to match. Flip cards for short riddles!</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 self-stretch md:self-auto justify-end">
+                    <span id="click-status" class="text-xs bg-amber-100 text-amber-800 font-bold py-1 px-3 rounded-full hidden">
+                        Piece Selected! Tap a slot.
+                    </span>
+                </div>
+            </div>
+
+            <!-- Main Jamboard Layout split in left and right -->
+            <div class="grid lg:grid-cols-12 gap-6 flex-grow items-stretch">
+                
+                <!-- Left Column (Grid of 4 Slots with Translations) -->
+                <div class="lg:col-span-7 flex flex-col space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow">
+                        <!-- SLOT 1: DAILY LIFE -->
+                        <div id="slot-daily-life" class="slot-container border-2 border-dashed border-stone-200 bg-white rounded-2xl p-4 flex flex-col min-h-[240px] transition-all" data-category="daily-life">
+                            <div class="flex flex-col mb-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="bg-sky-100 text-sky-800 text-xs font-extrabold px-3 py-1 rounded-full flex items-center gap-1.5 uppercase tracking-wider">
+                                        <i class="fa-solid fa-clock"></i> Daily Life
+                                    </span>
+                                    <span class="text-[10px] text-stone-400 font-medium">Routine & Habits</span>
+                                </div>
+                                <span class="text-xs text-stone-500 font-semibold italic mt-1 pl-1">Günlük Yaşam (Her günkü rutinler ve alışkanlıklar)</span>
+                            </div>
+                            <div class="drop-zone flex-grow grid grid-cols-1 gap-2.5 content-start min-h-[140px]" data-category="daily-life">
+                                <!-- Placed cards will appear here -->
+                            </div>
+                        </div>
+
+                        <!-- SLOT 2: FREE TIME -->
+                        <div id="slot-free-time" class="slot-container border-2 border-dashed border-stone-200 bg-white rounded-2xl p-4 flex flex-col min-h-[240px] transition-all" data-category="free-time">
+                            <div class="flex flex-col mb-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="bg-indigo-100 text-indigo-800 text-xs font-extrabold px-3 py-1 rounded-full flex items-center gap-1.5 uppercase tracking-wider">
+                                        <i class="fa-solid fa-heart"></i> Free Time
+                                    </span>
+                                    <span class="text-[10px] text-stone-400 font-medium">Hobbies & Passions</span>
+                                </div>
+                                <span class="text-xs text-stone-500 font-semibold italic mt-1 pl-1">Boş Zaman (Hobiler ve keyifli zaman geçirme)</span>
+                            </div>
+                            <div class="drop-zone flex-grow grid grid-cols-1 gap-2.5 content-start min-h-[140px]" data-category="free-time">
+                                <!-- Placed cards will appear here -->
+                            </div>
+                        </div>
+
+                        <!-- SLOT 3: THE SECRET -->
+                        <div id="slot-the-secret" class="slot-container border-2 border-dashed border-stone-200 bg-white rounded-2xl p-4 flex flex-col min-h-[240px] transition-all" data-category="the-secret">
+                            <div class="flex flex-col mb-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="bg-rose-100 text-rose-800 text-xs font-extrabold px-3 py-1 rounded-full flex items-center gap-1.5 uppercase tracking-wider">
+                                        <i class="fa-solid fa-user-secret"></i> The Secret
+                                    </span>
+                                    <span class="text-[10px] text-stone-400 font-medium">Hidden Habits & Quirks</span>
+                                </div>
+                                <span class="text-xs text-stone-500 font-semibold italic mt-1 pl-1">Gizli Sır (Sırlar, komik huylar ve bilinmeyenler)</span>
+                            </div>
+                            <div class="drop-zone flex-grow grid grid-cols-1 gap-2.5 content-start min-h-[140px]" data-category="the-secret">
+                                <!-- Placed cards will appear here -->
+                            </div>
+                        </div>
+
+                        <!-- SLOT 4: THE DREAM -->
+                        <div id="slot-the-dream" class="slot-container border-2 border-dashed border-stone-200 bg-white rounded-2xl p-4 flex flex-col min-h-[240px] transition-all" data-category="the-dream">
+                            <div class="flex flex-col mb-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="bg-amber-100 text-amber-800 text-xs font-extrabold px-3 py-1 rounded-full flex items-center gap-1.5 uppercase tracking-wider">
+                                        <i class="fa-solid fa-cloud-sun"></i> The Dream
+                                    </span>
+                                    <span class="text-[10px] text-stone-400 font-medium">Future Plans & Goals</span>
+                                </div>
+                                <span class="text-xs text-stone-500 font-semibold italic mt-1 pl-1">Hayal (Gelecek planları, hedefler ve istekler)</span>
+                            </div>
+                            <div class="drop-zone flex-grow grid grid-cols-1 gap-2.5 content-start min-h-[140px]" data-category="the-dream">
+                                <!-- Placed cards will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column (Unsorted Puzzle Pieces Deck & Prompts HUD) -->
+                <div class="lg:col-span-5 flex flex-col space-y-4">
+                    
+                    <!-- Dynamic Dialogue Card (Unlocked on correct placement) -->
+                    <div id="prompt-hud" class="bg-white border-2 border-teal-500 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all duration-300 hidden">
+                        <div class="absolute top-0 right-0 transform translate-x-3 -translate-y-3 bg-teal-100 text-teal-800 p-4 rounded-full">
+                            <i class="fa-solid fa-microphone-lines text-2xl animate-pulse"></i>
+                        </div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <span id="prompt-emoji" class="text-4xl">☕</span>
+                            <div>
+                                <h4 class="text-[10px] font-extrabold text-teal-600 uppercase tracking-widest">Speaking Topic Connected!</h4>
+                                <h3 id="prompt-title" class="font-black text-stone-800 text-lg">Teaglass & Laptop</h3>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <!-- Question 1: Elif's Persona -->
+                            <div class="bg-stone-50 border border-stone-200 rounded-xl p-3.5">
+                                <span class="text-[11px] font-extrabold text-stone-600 uppercase tracking-wider flex items-center gap-1 mb-1">
+                                    <i class="fa-solid fa-user-astronaut text-teal-600"></i> Question 1: About Elif
+                                </span>
+                                <p id="prompt-q-elif" class="text-stone-800 text-sm font-semibold leading-relaxed">
+                                    "Why does Elif put this in her routine?"
+                                </p>
+                            </div>
+
+                            <!-- Question 2: Student Connection -->
+                            <div class="bg-teal-50 border border-teal-100 rounded-xl p-3.5">
+                                <span class="text-[11px] font-extrabold text-teal-800 uppercase tracking-wider flex items-center gap-1 mb-1">
+                                    <i class="fa-solid fa-circle-question text-teal-600"></i> Question 2: For You
+                                </span>
+                                <p id="prompt-q-student" class="text-teal-900 text-sm font-bold leading-relaxed">
+                                    "How about you?"
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <button onclick="dismissPrompt()" class="mt-4 w-full bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold py-2.5 rounded-xl transition-all shadow-md shadow-teal-600/10">
+                            Got it, keep matching!
+                        </button>
+                    </div>
+
+                    <!-- Puzzle Piece Deck Container -->
+                    <div class="bg-white border border-stone-200 rounded-2xl flex-grow flex flex-col overflow-hidden min-h-[400px]">
+                        <div class="border-b border-stone-100 p-4 flex items-center justify-between bg-stone-50">
+                            <div>
+                                <h3 class="font-extrabold text-stone-800 text-sm">Puzzle Pieces Deck</h3>
+                                <p class="text-xs text-stone-500 font-medium">Click 🔄 to flip and read clues!</p>
+                            </div>
+                            <span class="text-xs font-bold bg-teal-100 text-teal-800 py-1 px-2.5 rounded-full" id="deck-counter">20 remaining</span>
+                        </div>
+                        
+                        <!-- Cards Container -->
+                        <div id="deck" class="p-4 overflow-y-auto max-h-[550px] flex-grow grid grid-cols-1 sm:grid-cols-2 gap-3.5 custom-scrollbar align-baseline">
+                            <!-- Cards will be dynamically injected -->
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Congratulations Overlay -->
+        <section id="screen-congrats" class="hidden max-w-xl mx-auto px-4 py-12 flex-grow flex flex-col justify-center items-center text-center">
+            <div class="bg-white border border-stone-200 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+                <div class="absolute -top-10 -left-10 w-24 h-24 bg-teal-200/40 rounded-full blur-2xl"></div>
+                <div class="absolute -bottom-10 -right-10 w-24 h-24 bg-amber-200/40 rounded-full blur-2xl"></div>
+
+                <div class="w-20 h-20 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-md shadow-teal-100/30">
+                    🎉
+                </div>
+                
+                <h2 class="text-3xl font-black text-stone-900 mb-3 tracking-tight">Fabulous Job!</h2>
+                <p class="text-stone-600 text-base mb-6 leading-relaxed">
+                    You solved Elif's puzzle of life! You understand her daily routines, free time joys, secret habits, and future hopes. Outstanding work communicating your own story along the way!
+                </p>
+
+                <div class="bg-stone-50 border border-stone-100 rounded-2xl p-4 mb-6 text-left space-y-2">
+                    <h4 class="font-bold text-xs text-stone-500 uppercase tracking-widest text-center">Your Customized Elif Blueprint</h4>
+                    <p class="text-xs text-stone-600 text-center italic">"Elif works happily with her hot Turkish tea, loves wandering into historical spots on weekends, hides a secret garden on her balcony, and keeps big dreams of traveling the globe!"</p>
+                </div>
+
+                <button id="btn-congrats-restart" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-extrabold py-3 px-6 rounded-2xl transition-all shadow-md shadow-teal-600/10">
+                    Play Again
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer containing details -->
+    <footer class="bg-white border-t border-stone-200 py-4 px-6 text-center text-xs text-stone-400 font-medium">
+        The Puzzle of Elif &copy; 2026. Custom-tailored for A2-B1 English Language Practice.
+    </footer>
+
+    <!-- Sound and Interactive JS Engine -->
+    <script>
+        // Web Audio Synthesizer for instant game sound feedback
+        const playSound = (type) => {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                if (type === 'success') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
+                    osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2); // G5
+                    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                } else if (type === 'error') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime); // A3
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime + 0.15); // Slide down
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                }
+            } catch (e) {
+                console.log("Audio contexts locked by security protocols.");
+            }
+        };
+
+        // 20 Puzzle pieces map configuration with short clues and specific two-part questions
+        const puzzlePieces = [
+            {
+                id: "piece-1",
+                name: "Teaglass & Laptop",
+                turkishName: "Çay Bardağı & Bilgisayar",
+                emoji: "☕💻",
+                correctCategory: "daily-life",
+                hint: "Sipping and typing...",
+                turkishHint: "Yudumlamak ve klavye sesi...",
+                qPersona: "Why does Elif need tea for work? Is she busy?",
+                qStudent: "Do you drink tea or coffee when you work?"
+            },
+            {
+                id: "piece-2",
+                name: "Vintage Suitcase",
+                turkishName: "Nostaljik Bavul",
+                emoji: "🧳✈️",
+                correctCategory: "free-time",
+                hint: "Ready for departure.",
+                turkishHint: "Yola çıkmaya hazır.",
+                qPersona: "Where is Elif traveling to relax?",
+                qStudent: "Where do you like to go on holiday?"
+            },
+            {
+                id: "piece-3",
+                name: "Headphones",
+                turkishName: "Kulaklık",
+                emoji: "🎧🎶",
+                correctCategory: "daily-life",
+                hint: "Beats block the noise.",
+                turkishHint: "Ritimler gürültüyü engeller.",
+                qPersona: "Does Elif listen to music to focus or to escape?",
+                qStudent: "What is your favorite song to listen to daily?"
+            },
+            {
+                id: "piece-4",
+                name: "Ring of Keys",
+                turkishName: "Anahtarlık",
+                emoji: "🔑🗝️",
+                correctCategory: "the-secret",
+                hint: "Locked doors, lost again.",
+                turkishHint: "Kilitli kapılar, yine kayıp.",
+                qPersona: "What secret door do these keys open?",
+                qStudent: "Have you ever lost your keys or phone?"
+            },
+            {
+                id: "piece-5",
+                name: "Old Passport",
+                turkishName: "Eski Pasaport",
+                emoji: "🛂🗺️",
+                correctCategory: "the-dream",
+                hint: "Stamps of tomorrow.",
+                turkishHint: "Yarının damgaları.",
+                qPersona: "Where does Elif dream of traveling next?",
+                qStudent: "What is your dream country to visit?"
+            },
+            {
+                id: "piece-6",
+                name: "Balcony Plants",
+                turkishName: "Balkon Bitkileri",
+                emoji: "🌱🏡",
+                correctCategory: "the-secret",
+                hint: "A hidden forest high up.",
+                turkishHint: "Yükseklerde saklı bir orman.",
+                qPersona: "Why is this her secret garden? Is she hiding from neighbors?",
+                qStudent: "Do you have plants in your home?"
+            },
+            {
+                id: "piece-7",
+                name: "Messy Desk",
+                turkishName: "Dağınık Masa",
+                emoji: "📐✍️",
+                correctCategory: "daily-life",
+                hint: "Paper chaos, active mind.",
+                turkishHint: "Kağıt karmaşası, aktif zihin.",
+                qPersona: "Is Elif's busy workspace creative or stressful?",
+                qStudent: "Is your desk or workspace clean or messy?"
+            },
+            {
+                id: "piece-8",
+                name: "Cozy Corner",
+                turkishName: "Sıcak Köşe",
+                emoji: "🛋️💡",
+                correctCategory: "free-time",
+                hint: "A warm, quiet hug.",
+                turkishHint: "Sıcak, sessiz bir kucaklaşma.",
+                qPersona: "Does she read books or play games in this corner?",
+                qStudent: "Where is your favorite spot to relax at home?"
+            },
+            {
+                id: "piece-9",
+                name: "Rainy Window",
+                turkishName: "Yağmurlu Pencere",
+                emoji: "🌧️🪟",
+                correctCategory: "the-dream",
+                hint: "Clouds and future thoughts.",
+                turkishHint: "Bulutlar ve gelecek düşünceleri.",
+                qPersona: "What is she dreaming about while watching the rain?",
+                qStudent: "What do you dream about on a rainy afternoon?"
+            },
+            {
+                id: "piece-10",
+                name: "Theater Ticket",
+                turkishName: "Tiyatro Bileti",
+                emoji: "🎟️🎭",
+                correctCategory: "free-time",
+                hint: "Waiting for the curtains.",
+                turkishHint: "Perdelerin açılmasını beklemek.",
+                qPersona: "Does Elif go to the theater with friends or alone?",
+                qStudent: "What do you like to do on weekends?"
+            },
+            {
+                id: "piece-11",
+                name: "Delivery Pizza",
+                turkishName: "Sipariş Pizza",
+                emoji: "🍕📦",
+                correctCategory: "the-secret",
+                hint: "Zero cooking, just box.",
+                turkishHint: "Sıfır yemek pişirme, sadece kutu.",
+                qPersona: "Why does she eat pizza in secret? Is she lazy?",
+                qStudent: "What is your favorite cheat food?"
+            },
+            {
+                id: "piece-12",
+                name: "Cezve Pot",
+                turkishName: "Cezve",
+                emoji: "☕🔮",
+                correctCategory: "the-dream",
+                hint: "Reading the dark fortune.",
+                turkishHint: "Karanlık falı okumak.",
+                qPersona: "What future does Elif hope to see in her coffee cup?",
+                qStudent: "Do you hope for exciting changes in your future?"
+            },
+            {
+                id: "piece-13",
+                name: "Meal-Prep Box",
+                turkishName: "Hazır Yemek Kabı",
+                emoji: "🍱🥦",
+                correctCategory: "daily-life",
+                hint: "Planned nutrition boxes.",
+                turkishHint: "Planlı beslenme kutuları.",
+                qPersona: "Is she preparing healthy food because she has no time?",
+                qStudent: "Do you prepare your food or eat out?"
+            },
+            {
+                id: "piece-14",
+                name: "Chocolate Bar",
+                turkishName: "Çikolata",
+                emoji: "🍫🤫",
+                correctCategory: "the-secret",
+                hint: "Forbidden sweet treasure.",
+                turkishHint: "Yasak tatlı hazine.",
+                qPersona: "Where does Elif hide her favorite chocolate?",
+                qStudent: "Do you have a secret sweet snack?"
+            },
+            {
+                id: "piece-15",
+                name: "Cookbook",
+                turkishName: "Yemek Kitabı",
+                emoji: "📖🍳",
+                correctCategory: "free-time",
+                hint: "Formulas for tasty plates.",
+                turkishHint: "Lezzetli tabaklar için formüller.",
+                qPersona: "Is she trying to learn a difficult recipe for fun?",
+                qStudent: "Do you like trying new food recipes?"
+            },
+            {
+                id: "piece-16",
+                name: "5:00 AM Alarm",
+                turkishName: "Sabah 5 Alarmı",
+                emoji: "⏰🌅",
+                correctCategory: "daily-life",
+                hint: "Ringing when dark.",
+                turkishHint: "Karanlıkta çalan zil.",
+                qPersona: "Is Elif a morning person, or is she tired?",
+                qStudent: "What time do you wake up for your daily routine?"
+            },
+            {
+                id: "piece-17",
+                name: "Muddy Shoe",
+                turkishName: "Çamurlu Ayakkabı",
+                emoji: "👟🌧️",
+                correctCategory: "free-time",
+                hint: "Dirty steps outside.",
+                turkishHint: "Dışarıda kirli adımlar.",
+                qPersona: "Does Elif love nature, or did she get caught in rain?",
+                qStudent: "Do you prefer outdoor sports or staying inside?"
+            },
+            {
+                id: "piece-18",
+                name: "Sketchbook",
+                turkishName: "Resim Defteri",
+                emoji: "🎨🏙️",
+                correctCategory: "the-dream",
+                hint: "Visions waiting for ink.",
+                turkishHint: "Mürekkep bekleyen vizyonlar.",
+                qPersona: "What big artistic dream is she drawing here?",
+                qStudent: "Do you have a creative dream for your life?"
+            },
+            {
+                id: "piece-19",
+                name: "Sleeping Cat",
+                turkishName: "Uyuyan Kedi",
+                emoji: "🐱💤",
+                correctCategory: "the-dream",
+                hint: "Soft purrs on study days.",
+                turkishHint: "Ders günlerinde yumuşak mırıltılar.",
+                qPersona: "Why is having a cat a beautiful dream for her?",
+                qStudent: "What is your dream pet to have at home?"
+            },
+            {
+                id: "piece-20",
+                name: "Top Secret Notebook",
+                turkishName: "Çok Gizli Defter",
+                emoji: "📓🔐",
+                correctCategory: "the-secret",
+                hint: "Words under lock.",
+                turkishHint: "Kilit altındaki kelimeler.",
+                qPersona: "What secret secrets does Elif write here?",
+                qStudent: "Do you write in a secret diary or journal?"
+            }
+        ];
+
+        // Game State Variables
+        let currentScreen = 'intro';
+        let placedCount = 0;
+        let selectedPieceId = null; 
+        const maxPieces = puzzlePieces.length;
+
+        // Elements selectors
+        const btnStart = document.getElementById('btn-start');
+        const btnRestart = document.getElementById('btn-restart');
+        const btnCongratsRestart = document.getElementById('btn-congrats-restart');
+        const screenIntro = document.getElementById('screen-intro');
+        const screenGame = document.getElementById('screen-game');
+        const screenCongrats = document.getElementById('screen-congrats');
+        const deckContainer = document.getElementById('deck');
+        const progressFill = document.getElementById('progress-bar-fill');
+        const progressText = document.getElementById('progress-text');
+        const gameProgressContainer = document.getElementById('game-progress');
+        const deckCounter = document.getElementById('deck-counter');
+        const clickStatusSpan = document.getElementById('click-status');
+
+        // Dialog Panel Components
+        const promptHud = document.getElementById('prompt-hud');
+        const promptEmoji = document.getElementById('prompt-emoji');
+        const promptTitle = document.getElementById('prompt-title');
+        const promptQElif = document.getElementById('prompt-q-elif');
+        const promptQStudent = document.getElementById('prompt-q-student');
+
+        // Initialize App
+        window.onload = () => {
+            initGame();
+        };
+
+        const initGame = () => {
+            placedCount = 0;
+            selectedPieceId = null;
+            updateProgressBar();
+            renderDeck();
+            clearAllSlots();
+            dismissPrompt();
+            
+            // Wire click events
+            btnStart.onclick = () => switchScreen('game');
+            btnRestart.onclick = restartGame;
+            btnCongratsRestart.onclick = restartGame;
+            
+            setupDragAndDrop();
+        };
+
+        const switchScreen = (screenName) => {
+            currentScreen = screenName;
+            screenIntro.classList.add('hidden');
+            screenGame.classList.add('hidden');
+            screenCongrats.classList.add('hidden');
+            btnRestart.classList.add('hidden');
+            gameProgressContainer.classList.add('hidden');
+
+            if (screenName === 'intro') {
+                screenIntro.classList.remove('hidden');
+            } else if (screenName === 'game') {
+                screenGame.classList.remove('hidden');
+                btnRestart.classList.remove('hidden');
+                gameProgressContainer.classList.remove('hidden');
+            } else if (screenName === 'congrats') {
+                screenCongrats.classList.remove('hidden');
+            }
+        };
+
+        const restartGame = () => {
+            initGame();
+            switchScreen('intro');
+        };
+
+        const updateProgressBar = () => {
+            const pct = (placedCount / maxPieces) * 100;
+            progressFill.style.width = `${pct}%`;
+            progressText.innerText = `${placedCount}/${maxPieces}`;
+            deckCounter.innerText = `${maxPieces - placedCount} remaining`;
+        };
+
+        const clearAllSlots = () => {
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.innerHTML = '';
+            });
+        };
+
+        // Render all unsorted pieces with 3D flip card wrappers
+        const renderDeck = () => {
+            deckContainer.innerHTML = '';
+            // Shuffle pieces slightly
+            const randomized = [...puzzlePieces].sort(() => Math.random() - 0.5);
+            
+            randomized.forEach(piece => {
+                const cardWrapper = document.createElement('div');
+                cardWrapper.className = "card-perspective w-full cursor-grab active:cursor-grabbing select-none";
+                cardWrapper.id = `wrapper-${piece.id}`;
+                cardWrapper.draggable = true;
+
+                const cardInner = document.createElement('div');
+                cardInner.className = "card-inner shadow-sm hover:shadow-md transition-all duration-300 border border-stone-200 rounded-2xl bg-white";
+                cardInner.id = `inner-${piece.id}`;
+
+                // FRONT SIDE of Card
+                const frontSide = document.createElement('div');
+                frontSide.className = "card-front bg-white p-3 flex flex-col justify-between items-stretch border border-stone-100 rounded-2xl h-full";
+                frontSide.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-3xl shrink-0">${piece.emoji}</span>
+                        <div class="text-left min-w-0 flex-grow">
+                            <p class="font-bold text-xs text-stone-800 leading-snug truncate">${piece.name}</p>
+                            <p class="text-[10px] text-stone-500 italic leading-snug truncate font-semibold mt-0.5">${piece.turkishName}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between border-t border-stone-100 pt-2 mt-1">
+                        <span class="text-[9px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full">Tap/Drag card</span>
+                        <button class="flip-trigger-btn text-[10px] bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold px-2 py-1 rounded-lg flex items-center gap-1 transition-all">
+                            <i class="fa-solid fa-rotate"></i> <span>Clue / İpucu</span>
+                        </button>
+                    </div>
+                `;
+
+                // BACK SIDE of Card (Thinking hint)
+                const backSide = document.createElement('div');
+                backSide.className = "card-back bg-gradient-to-br from-teal-50 to-emerald-50 p-3 flex flex-col justify-between items-stretch border border-teal-200 rounded-2xl h-full";
+                backSide.innerHTML = `
+                    <div class="text-left">
+                        <span class="text-[10px] font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1">
+                            <i class="fa-regular fa-lightbulb text-teal-600"></i> Riddle / Bilmece:
+                        </span>
+                        <p class="text-xs text-stone-700 font-bold mt-2 leading-relaxed">${piece.hint}</p>
+                        <p class="text-[10px] text-teal-800 italic mt-1 leading-snug font-semibold">${piece.turkishHint}</p>
+                    </div>
+                    <div class="flex items-center justify-end border-t border-teal-100/50 pt-2">
+                        <button class="flip-trigger-btn text-[10px] bg-teal-100 hover:bg-teal-200 text-teal-800 font-bold px-2 py-1 rounded-lg flex items-center gap-1 transition-all">
+                            <i class="fa-solid fa-rotate-left"></i> <span>Back</span>
+                        </button>
+                    </div>
+                `;
+
+                cardInner.appendChild(frontSide);
+                cardInner.appendChild(backSide);
+                cardWrapper.appendChild(cardInner);
+
+                // --- Events Hookups ---
+                cardWrapper.addEventListener('click', (e) => {
+                    if (e.target.closest('.flip-trigger-btn')) {
+                        e.stopPropagation();
+                        cardInner.classList.toggle('flipped');
+                        playSound('success');
+                    } else {
+                        handleMobilePieceSelection(piece.id);
+                    }
+                });
+
+                cardWrapper.addEventListener('dragstart', (e) => {
+                    cardInner.classList.remove('flipped');
+                    draggedElement = cardWrapper;
+                    e.dataTransfer.setData('text/plain', piece.id);
+                    cardWrapper.classList.add('opacity-40');
+                });
+
+                cardWrapper.addEventListener('dragend', () => {
+                    cardWrapper.classList.remove('opacity-40');
+                    draggedElement = null;
+                });
+
+                deckContainer.appendChild(cardWrapper);
+            });
+        };
+
+        // Handle Mobile selection (Tap Card then Tap Slot)
+        const handleMobilePieceSelection = (pieceId) => {
+            const cardEl = document.getElementById(`wrapper-${pieceId}`);
+            if (!cardEl || cardEl.classList.contains('opacity-40')) return;
+
+            const pieceObj = puzzlePieces.find(p => p.id === pieceId);
+
+            if (selectedPieceId === pieceId) {
+                selectedPieceId = null;
+                cardEl.classList.remove('ring-4', 'ring-teal-500', 'bg-teal-50');
+                clickStatusSpan.classList.add('hidden');
+            } else {
+                if (selectedPieceId) {
+                    const prevEl = document.getElementById(`wrapper-${selectedPieceId}`);
+                    if (prevEl) prevEl.classList.remove('ring-4', 'ring-teal-500', 'bg-teal-50');
+                }
+                
+                selectedPieceId = pieceId;
+                cardEl.classList.add('ring-4', 'ring-teal-500', 'bg-teal-50');
+                clickStatusSpan.innerText = `Selected: "${pieceObj.name}". Tap a slot to match.`;
+                clickStatusSpan.classList.remove('hidden');
+            }
+        };
+
+        // Drag-and-Drop mechanics
+        let draggedElement = null;
+
+        const setupDragAndDrop = () => {
+            const slotContainers = document.querySelectorAll('.slot-container');
+            
+            slotContainers.forEach(container => {
+                container.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    container.classList.add('drag-over');
+                });
+
+                container.addEventListener('dragleave', () => {
+                    container.classList.remove('drag-over');
+                });
+
+                container.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    container.classList.remove('drag-over');
+                    
+                    const id = e.dataTransfer.getData('text/plain');
+                    if (id) {
+                        tryToPlacePiece(id, container.dataset.category);
+                    }
+                });
+
+                container.addEventListener('click', () => {
+                    if (selectedPieceId) {
+                        tryToPlacePiece(selectedPieceId, container.dataset.category);
+                    }
+                });
+            });
+        };
+
+        // Place piece logic & instant validation mechanism
+        const tryToPlacePiece = (pieceId, slotCategory) => {
+            const piece = puzzlePieces.find(p => p.id === pieceId);
+            const cardWrapper = document.getElementById(`wrapper-${pieceId}`);
+            const targetContainer = document.querySelector(`.slot-container[data-category="${slotCategory}"]`);
+            const targetZone = targetContainer.querySelector('.drop-zone');
+
+            if (!piece || !cardWrapper) return;
+
+            cardWrapper.classList.remove('ring-4', 'ring-teal-500', 'bg-teal-50');
+            selectedPieceId = null;
+            clickStatusSpan.classList.add('hidden');
+
+            if (piece.correctCategory === slotCategory) {
+                // CORRECT SLOT: Snap successfully
+                playSound('success');
+                
+                const lockedCard = document.createElement('div');
+                lockedCard.className = "bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl p-3 flex items-center justify-between transform transition-all duration-300 scale-95 opacity-100 shadow-sm cursor-pointer hover:bg-emerald-100 success-glow relative overflow-hidden";
+                
+                lockedCard.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl shrink-0">${piece.emoji}</span>
+                        <div class="truncate text-left">
+                            <p class="font-extrabold text-xs leading-tight truncate text-stone-800">${piece.name}</p>
+                            <p class="text-[10px] text-stone-500 italic truncate font-semibold mt-0.5">${piece.turkishName}</p>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0 ml-1">
+                        <span class="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"><i class="fa-solid fa-lock text-[7px] mr-0.5"></i> Placed</span>
+                    </div>
+                `;
+
+                // Re-open questions on click inside slots
+                lockedCard.onclick = (e) => {
+                    e.stopPropagation();
+                    triggerPromptPanel(piece);
+                };
+
+                targetZone.appendChild(lockedCard);
+                cardWrapper.remove();
+
+                placedCount++;
+                updateProgressBar();
+
+                triggerPromptPanel(piece);
+
+                if (placedCount === maxPieces) {
+                    setTimeout(() => {
+                        switchScreen('congrats');
+                    }, 1200);
+                }
+            } else {
+                // WRONG SLOT: Shake card & visual feedback
+                playSound('error');
+                
+                targetContainer.classList.add('shake-animation', 'border-rose-400', 'bg-rose-50');
+                cardWrapper.classList.add('shake-animation');
+
+                setTimeout(() => {
+                    targetContainer.classList.remove('shake-animation', 'border-rose-400', 'bg-rose-50');
+                    cardWrapper.classList.remove('shake-animation');
+                }, 400);
+            }
+        };
+
+        // Displays double student speaking prompts inside interactive panel HUD
+        const triggerPromptPanel = (piece) => {
+            promptEmoji.innerText = piece.emoji;
+            promptTitle.innerText = piece.name;
+            promptQElif.innerText = `"${piece.qPersona}"`;
+            promptQStudent.innerText = `"${piece.qStudent}"`;
+
+            // Display panel with active fade-in styling
+            promptHud.classList.remove('hidden');
+            promptHud.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                promptHud.classList.remove('scale-95', 'opacity-0');
+                promptHud.classList.add('scale-100', 'opacity-100');
+            }, 50);
+        };
+
+        const dismissPrompt = () => {
+            promptHud.classList.add('hidden');
+        };
+    </script>
+</body>
+</html>
